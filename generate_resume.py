@@ -13,35 +13,44 @@ env = Environment(
     variable_end_string='>>',
     comment_start_string='<#',
     comment_end_string='#>',
-    loader = PackageLoader(__name__, 'templates')
+    loader=PackageLoader(__name__, 'templates')
 )
+
 
 def match_tags(tags, filter_tags):
     return [t for t in filter_tags if t in tags] == filter_tags
 
+
 def is_filtered(node, tags):
-    return type(node) is dict and node.has_key('tags') and not match_tags(node['tags'], tags)
+    return type(node) is dict and 'tags' in node and not match_tags(node['tags'], tags)
+
 
 def filter_by_tags(node, tags):
     if type(node) is dict:
-        return dict((k, filter_by_tags(v, tags)) for k, v in node.iteritems() if not is_filtered(v, tags))
+        return dict(
+            (k, filter_by_tags(v, tags))
+            for k, v in node.iteritems() if not is_filtered(v, tags)
+        )
     elif type(node) is list:
-        return [filter_by_tags(v, tags) for v in node if not is_filtered(v, tags)]
+        return [filter_by_tags(v, tags)
+                for v in node if not is_filtered(v, tags)]
     else:
         return node
 
+
 def render(node):
     if type(node) is dict:
-        if node.has_key('template'):
+        if 'template' in node:
             rendered_node = dict((k, render(v)) for k, v in node.iteritems())
             template = env.get_template(node['template'] + '.jinja2')
-            return template.render(node = rendered_node)
+            return template.render(node=rendered_node)
         else:
             raise SyntaxError("template is not specified")
     elif type(node) is list:
         return [render(v) for v in node]
     else:
         return node
+
 
 if __name__ == "__main__":
     with open('resume.yaml') as resume_file:
